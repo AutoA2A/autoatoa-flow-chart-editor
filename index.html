@@ -1,0 +1,358 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>流程图编辑器</title>
+    <style>
+        body {
+            font-family: 'Open Sans', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f9f9f9;
+            color: #333;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 16px;
+        }
+        nav {
+            background-color: #3498db;
+            color: #fff;
+            padding: 16px;
+            text-align: center;
+        }
+        nav ul {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+        nav ul li {
+            display: inline-block;
+            margin-right: 16px;
+        }
+        nav ul li a {
+            color: #fff;
+            text-decoration: none;
+        }
+        nav ul li a:hover {
+            text-decoration: underline;
+        }
+        header {
+            background-color: #fff;
+            padding: 16px;
+            border-bottom: 4px solid #3498db;
+        }
+        header h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+        @media (max-width: 768px) {
+            nav ul li {
+                display: block;
+                margin-right: 0;
+                padding: 8px 0;
+            }
+            .container {
+                padding: 8px;
+            }
+        }
+    </style>
+<meta name="description" content="支持拖拽、连线、实时预览，新增导入功能，优化导出设置"><meta name="keywords" content="流程图,编辑器,协作编辑,模板库,导出"><meta name="robots" content="index,follow,max-image-preview:large"><meta property="og:type" content="website"><meta property="og:title" content="流程图编辑器"><meta property="og:description" content="支持拖拽、连线、实时预览，新增导入功能，优化导出设置"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="流程图编辑器"><meta name="twitter:description" content="支持拖拽、连线、实时预览，新增导入功能，优化导出设置"><script type="application/ld+json">{"@context":"https://schema.org","@type":"WebApplication","name":"流程图编辑器","description":"支持拖拽、连线、实时预览，新增导入功能，优化导出设置","applicationCategory":"UtilitiesApplication","operatingSystem":"Any","offers":{"@type":"Offer","price":"0","priceCurrency":"CNY"}}</script><style data-a2a="basecss">*,*::before,*::after{box-sizing:border-box}html{-webkit-text-size-adjust:100%}body{margin:0}img,canvas,svg,video,table{max-width:100%;height:auto}pre,code{white-space:pre-wrap;word-break:break-word}[data-a2a="header"]{width:100%}@media(max-width:640px){body{font-size:15px}}</style></head>
+<body>
+    <nav>
+        <ul>
+            <li><a href="index.html">首页</a></li>
+            <li><a href="templates.html">模板库</a></li>
+            <li><a href="collaboration.html">协作编辑</a></li>
+            <li><a href="settings.html">全局设置</a></li>
+            <li><a href="help.html">使用帮助</a></li>
+            <li><a href="export.html">导出与保存</a></li>
+        </ul>
+    </nav>
+    <header>
+        <div class="container">
+            <h1>交互式流程图编辑器</h1>
+        </div>
+    </header>
+    <div class="container">
+        
+<divstyle="display:flex; gap:16px;">
+  <aside id="node-palette" style="width:180px;background:#f9f9f9;border:1px solid #ddd;border-radius:4px;padding:16px;overflow:auto;box-sizing:border-box;">
+    <h3 style="margin-top:0;margin-bottom:8px;font-size:1em;color:#333;">节点库</h3>
+    <div data-type="start" class="node-template" style="padding:12px;margin-bottom:8px:background:#fff;border:1px solid #ddd;border-radius:4px:cursor:grab:user-select:none;">开始</div>
+    <div data-type="process" class="node-template" style="padding:12px;margin-bottom:8px:background:#fff;border:1px solid #ddd;border-radius:4px:cursor:grab:user-select:none;">处理</div>
+    <div data-type="decision" class="node-template" style="padding:12px;margin-bottom:8px:background:#fff;border:1px solid #ddd;border-radius:4px:cursor:grab:user-select:none;">判断</div>
+    <div data-type="end" class="node-template" style="padding:12px:background:#fff;border:1px solid #ddd;border-radius:4px:cursor:grab:user-select:none;">结束</div>
+  </aside>
+
+  <section id="canvas-wrapper" style="flex:1;position:relative;background:#fff;border:1px solid #ddd;border-radius:4px:overflow:hidden;">
+    <svg id="draw-surface" width="100%" height="100%" style="background:#fff;"></svg>
+  </section>
+
+  <aside id="properties" style="width:260px;background:#f9f9f9;border:1px solid #ddd;border-radius:4px;padding:16px:overflow:auto;box-sizing:border-box;">
+    <h3 style="margin-top:0;margin-bottom:8px;font-size:1em;color:#333;">属性</h3>
+    <div id="prop-content" style="font-size:0.94rem;color:#555;">请选择一个节点</div>
+    <button id="btn-delete" class="btn" style="margin-top:12px;width:100%;padding:8px;background:#e74c3c;color:#fff;border:none;border-radius:4px:cursor:pointer;">删除选中节点</button>
+  </aside>
+</div>
+
+<section style="margin-top:16px;">
+  <h2 style="margin-top:0;">工具栏作工具</h2>
+  <button id="btn-import" class="btn" style="margin-left:8px;">导入</button> <button id="btn-export" class="btn" style="margin-left:8px;">导出设置</button></h2>
+</section>
+
+<script>
+  // 工具栏按钮
+  document.getElementById('btn-import').addEventListener('click', () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    input.onchange = e => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = ev => {
+        try {
+          const data = JSON.parse(ev.target.result);
+          loadFromJSON(data);
+        } catch (err) {
+          alert('导入失败：无效的 JSON');
+        }
+      };
+      reader.readAsText(file);
+    };
+    input.click();
+  });
+
+  document.getElementById('btn-export').addEventListener('click', () => {
+    const svg = document.getElementById('draw-surface');
+    const serializer = new XMLSerializer();
+    const source = serializer.serializeToString(svg);
+    // 添加 SVG 命名空间
+    const svgBlob = new Blob([source], {type:'image/svg+xml;charset=utf-8'});
+    const url = URL.createObjectURL(svgBlob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'flowchart.svg';
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+
+  // 拖拽节点
+  const paletteItems = document.querySelectorAll('.node-template');
+  paletteItems.forEach(item => {
+    item.setAttribute('draggable', 'true');
+    item.addEventListener('dragstart', e => {
+      e.dataTransfer.setData('text/plain', item.dataset.type);
+      e.dataTransfer.effectAllowed = 'move';
+    });
+  });
+
+  const svg = document.getElementById('draw-surface');
+  let selectedNodeId = null;
+
+  // 创建节点
+  function createNode(type, x, y, label) {
+    const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    g.setAttribute('class', 'node');
+    g.setAttribute('data-type', type);
+    g.setAttribute('data-label', label);
+    g.setAttribute('transform', `translate(${x},${y})`);
+    // 根据类型绘制不同形状
+    let width = 80, height = 40;
+    if (type === 'decision') {
+      // 菱形
+      const points = `0,${height/2} ${width/2},0 ${width},${height/2} ${width/2},${height}`;
+      const poly = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+      poly.setAttribute('points', points);
+      poly.setAttribute('fill', '#fff');
+      poly.setAttribute('stroke', '#333');
+      g.appendChild(poly);
+    } else {
+      const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+      rect.setAttribute('width', width);
+      rect.setAttribute('height', height);
+      rect.setAttribute('rx', 4);
+      rect.setAttribute('fill', '#fff');
+      rect.setAttribute('stroke', '#333');
+      g.appendChild(rect);
+    }
+    const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    text.setAttribute('x', width/2);
+    text.setAttribute('y', height/2 + 5);
+    text.setAttribute('text-anchor', 'middle');
+    text.setAttribute('fill', '#333');
+    text.setAttribute('font-size', '14');
+    text.textContent = label;
+    g.appendChild(text);
+    // 使节点可选
+    g.addEventListener('mousedown', e => {
+      e.stopPropagation();
+      selectNode(g);
+    });
+    svg.appendChild(g);
+    return g;
+  }
+
+  function selectNode(el) {
+    // 取消之前选中
+    document.querySelectorAll('.node.selected').forEach(n => n.classList.remove('selected'));
+    el.classList.add('selected');
+    selectedNodeId = el;
+    showProperties(el);
+  }
+
+  function showProperties(node) {
+    const type = node.dataset.type;
+    const label = node.dataset.label || '';
+    document.getElementById('prop-content').innerHTML = `
+      <strong>类型：</strong>${type}<br>
+      <strong>标签：</strong><input id="prop-label" type="text" value="${label}" style="width:100%;margin-top:4px;">
+    `;
+    const input = document.getElementById('prop-label');
+    input.addEventListener('change', e => {
+      const newLabel = e.target.value.trim() || '未命名';
+      node.dataset.label = newLabel;
+      const text = node.querySelector('text');
+      if (text) text.textContent = newLabel;
+    });
+  }
+
+  // 画布放置
+  svg.addEventListener('dragover', e => e.preventDefault());
+  svg.addEventListener('drop', e => {
+    e.preventDefault();
+    const type = e.dataTransfer.getData('text/plain');
+    const rect = svg.getBoundingClientRect();
+    const x = e.clientX - rect.left - 40; // 偏移到中心
+    const y = e.clientY - rect.top - 20;
+    createNode(type, x, y, type === 'start' ? '开始' : type === 'end' ? '结束' : type === 'process' ? '处理' : '判断');
+  });
+
+  // 删除选中节点及其连线
+  document.getElementById('btn-delete').addEventListener('click', () => {
+    if (!selectedNodeId) return;
+    // 删除连线
+    document.querySelectorAll('.connection').forEach(conn => {
+      if (conn.dataset.from === selectedNodeId.id || conn.dataset.to === selectedNodeId.id) {
+        conn.remove();
+      }
+    });
+    selectedNodeId.remove();
+    selectedNodeId = null;
+    document.getElementById('prop-content').textContent = '请选择一个节点';
+  });
+
+  // 连线功能：点击节点设为起点，再点击另一个节点画线
+  let startNode = null;
+  svg.addEventListener('click', e => {
+    if (e.target !== svg && e.target.closest('.node')) {
+      const node = e.target.closest('.node');
+      if (!startNode) {
+        startNode = node;
+        node.setAttribute('data-start', 'true');
+      } else {
+        if (node === startNode) {
+          startNode.removeAttribute('data-start');
+          startNode = null;
+          return;
+        }
+        const line = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        line.setAttribute('class', 'connection');
+        line.setAttribute('data-from', startNode.id || `node${Date.now()}`);
+        line.setAttribute('data-to', node.id || `node${Date.now()+1}`);
+        // 简单直线连接中心
+        const getCenter = el => {
+          const bbox = el.getBoundingClientRect();
+          const svgRect = svg.getBoundingClientRect();
+          const cx = bbox.left + bbox.width/2 - svgRect.left;
+          const cy = bbox.top + bbox.height/2 - svgRect.top;
+          return {x:cx, y:cy};
+        };
+        const c1 = getCenter(startNode);
+        const c2 = getCenter(node);
+        const d = `M${c1.x},${c1.y} L${c2.x},${c2.y}`;
+        line.setAttribute('d', d);
+        line.setAttribute('stroke', '#3498db');
+        line.setAttribute('stroke-width', '2');
+        line.setAttribute('fill', 'none');
+        svg.appendChild(line);
+        startNode.removeAttribute('data-start');
+        startNode = null;
+      }
+    } else {
+      // 点击空白取消起点
+      if (startNode) {
+        startNode.removeAttribute('data-start');
+        startNode = null;
+      }
+    }
+  });
+
+  // 导入/导出数据结构
+  function loadFromJSON(data) {
+    // 清空画布
+    svg.innerHTML = '';
+    // 创建节点
+    data.nodes.forEach(n => {
+      const node = createNode(n.type, n.x, n.y, n.label || n.type);
+      if (n.id) node.id = n.id;
+    });
+    // 创建连线
+    data.connections.forEach(c => {
+      const fromEl = document.getElementById(c.from);
+      const toEl = document.getElementById(c.to);
+      if (!fromEl || !toEl) return;
+      const line = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      line.setAttribute('class', 'connection');
+      line.setAttribute('data-from', c.from);
+      line.setAttribute('data-to', c.to);
+      const getCenter = el => {
+        const bbox = el.getBoundingClientRect();
+        const svgRect = svg.getBoundingClientRect();
+        const cx = bbox.left + bbox.width/2 - svgRect.left;
+        const cy = bbox.top + bbox.height/2 - svgRect.top;
+        return {x:cx, y:cy};
+      };
+      const c1 = getCenter(fromEl);
+      const c2 = getCenter(toEl);
+      const d = `M${c1.x},${c1.y} L${c2.x},${c2.y}`;
+      line.setAttribute('d', d);
+      line.setAttribute('stroke', '#3498db');
+      line.setAttribute('stroke-width', '2');
+      line.setAttribute('fill', 'none');
+      svg.appendChild(line);
+    });
+  }
+
+  // 导出为 JSON（可通过按钮扩展）
+  function exportToJSON() {
+    const nodes = [];
+    const connections = [];
+    svg.querySelectorAll('.node').forEach(node => {
+      const bbox = node.getBoundingClientRect();
+      const svgRect = svg.getBoundingClientRect();
+      nodes.push({
+        id: node.id || '',
+        type: node.dataset.type,
+        label: node.dataset.label || '',
+        x: bbox.left + bbox.width/2 - svgRect.left,
+        y: bbox.top + bbox.height/2 - svgRect.top
+      });
+    });
+    svg.querySelectorAll('.connection').forEach(conn => {
+      connections.push({
+        from: conn.dataset.from,
+        to: conn.dataset.to
+      });
+    });
+    return {nodes, connections};
+  }
+  // 可挂载到导出按钮导出 JSON（此处省略，仅作示范）
+</script>
+
+    </div>
+<footer data-a2a="footer" style="margin-top:48px;padding:28px 16px;border-top:1px solid rgba(127,127,127,.16);text-align:center;font-family:system-ui,-apple-system,'PingFang SC',sans-serif;line-height:1.9;color:#8a8f99;background:transparent"><a href="https://www.autoa2a.org" target="_blank" rel="noopener" style="display:inline-block;margin-bottom:10px"><img src="https://agent.oagi.com.cn/uploads/202606/29ea3ed5413830b3.png" alt="AutoA2A" style="height:36px;vertical-align:middle;border:0"></a><div style="font-size:13.5px;color:#6b7280;max-width:760px;margin:0 auto 6px">✅️ <b>AutoA2A</b> · 智能体互连 Agent to Agent 平台——让智能体无缝发现、协商、协作与安全交换数据，开启 AI 即服务新时代。</div><div style="font-size:13px">本网站由 <a href="https://www.autoa2a.org" target="_blank" rel="noopener" style="color:#f2603c;text-decoration:none;font-weight:600">www.autoa2a.org</a> 多个 AI 协作生成</div><div style="font-size:12px;color:#aab;margin-top:6px">Copyright © 2025 - 2026 AutoA2A. All Rights Reserved. A2A版权所有</div></footer></body>
+</html>
