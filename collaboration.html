@@ -1,0 +1,330 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>协作编辑</title>
+    <style>
+        body {
+            font-family: 'Open Sans', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f9f9f9;
+            color: #333;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 16px;
+        }
+        nav {
+            background-color: #3498db;
+            color: #fff;
+            padding: 16px;
+            text-align: center;
+        }
+        nav ul {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+        nav ul li {
+            display: inline-block;
+            margin-right: 16px;
+        }
+        nav ul li a {
+            color: #fff;
+            text-decoration: none;
+        }
+        nav ul li a:hover {
+            text-decoration: underline;
+        }
+        header {
+            background-color: #fff;
+            padding: 16px;
+            border-bottom: 4px solid #3498db;
+        }
+        header h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+        @media (max-width: 768px) {
+            nav ul li {
+                display: block;
+                margin-right: 0;
+                padding: 8px 0;
+            }
+            .container {
+                padding: 8px;
+            }
+        }
+    </style>
+<meta name="description" content="支持多用户实时协同编辑流程图，并记录版本历史"><meta name="keywords" content="流程图,编辑器,协作编辑,模板库,导出"><meta name="robots" content="index,follow,max-image-preview:large"><meta property="og:type" content="website"><meta property="og:title" content="协作编辑"><meta property="og:description" content="支持多用户实时协同编辑流程图，并记录版本历史"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="协作编辑"><meta name="twitter:description" content="支持多用户实时协同编辑流程图，并记录版本历史"><script type="application/ld+json">{"@context":"https://schema.org","@type":"WebApplication","name":"协作编辑","description":"支持多用户实时协同编辑流程图，并记录版本历史","applicationCategory":"UtilitiesApplication","operatingSystem":"Any","offers":{"@type":"Offer","price":"0","priceCurrency":"CNY"}}</script><style data-a2a="basecss">*,*::before,*::after{box-sizing:border-box}html{-webkit-text-size-adjust:100%}body{margin:0}img,canvas,svg,video,table{max-width:100%;height:auto}pre,code{white-space:pre-wrap;word-break:break-word}[data-a2a="header"]{width:100%}@media(max-width:640px){body{font-size:15px}}</style></head>
+<body>
+    <nav>
+        <ul>
+            <li><a href="index.html">首页</a></li>
+            <li><a href="templates.html">模板库</a></li>
+            <li><a href="collaboration.html">协作编辑</a></li>
+            <li><a href="settings.html">全局设置</a></li>
+            <li><a href="help.html">使用帮助</a></li>
+            <li><a href="export.html">导出与保存</a></li>
+        </ul>
+    </nav>
+    <header>
+        <div class="container">
+            <h1>交互式流程图编辑器</h1>
+        </div>
+    </header>
+    <div class="container">
+        
+<section style="margin-bottom:16px;">
+  <h2 style="margin-top:0;">协作编辑</h2>
+  <div>
+    <label>房间ID: <input type="text" id="roomId" readonly style="width:180px;margin-left:8px;"></label>
+    <button id="btnNewRoom" class="btn">新建房间</button>
+    <button id="btnJoinRoom" class="btn">加入房间</button>
+    <a href="index.html" id="linkHome" class="btn" style="margin-left:8px;">返回首页</a>
+  </div>
+  <div style="margin-top:8px;">
+    <button id="btnAddNode" class="btn">添加节点</button>
+    <button id="btnClear" class="btn">清空画布</button>
+  </div>
+</section>
+
+<svg id="drawing" width="100%" height="500" style="border:1px solid #ddd;background:#fff;"></svg>
+
+<section style="margin-top:16px;">
+  <h2 style="margin-top:0;">版本历史</h2>
+  <ul id="historyList" style="list-style:none;padding:0;margin:0;max-height:200px;overflow-y:auto;border:1px solid #ddd;"></ul>
+</section>
+
+<script>
+  const svg = document.getElementById('drawing');
+  const roomInput = document.getElementById('roomId');
+  const btnNewRoom = document.getElementById('btnNewRoom');
+  const btnJoinRoom = document.getElementById('btnJoinRoom');
+  const btnAddNode = document.getElementById('btnAddNode');
+  const btnClear = document.getElementById('btnClear');
+  const historyList = document.getElementById('historyList');
+  const linkHome = document.getElementById('linkHome');
+
+  let roomId = '';
+  let bc = null;
+  let state = {nodes:[], edges:[]};
+  let mode = null; // 'addNode' or null
+  let sourceNodeId = null;
+  const NODE_W = 120, NODE_H = 40;
+
+  function makeId() {
+    const array = new Uint8Array(4);
+    crypto.getRandomValues(array);
+    return Array.from(array, b => b.toString(16).padStart(2, '0')).join('');
+  }
+  function stateKey() { return 'flowchart-state-' + roomId; }
+  function historyKey() { return 'flowchart-history-' + roomId; }
+  function broadcastName() { return 'flowchart-' + roomId; }
+
+  function saveState() {
+    localStorage.setItem(stateKey(), JSON.stringify(state));
+    addToHistory();
+  }
+  function loadState() {
+    const data = localStorage.getItem(stateKey());
+    if (data) {
+      try { state = JSON.parse(data); } catch(e) { state = {nodes:[], edges:[]}; }
+    } else {
+      state = {nodes:[], edges:[]};
+    }
+    render();
+  }
+  function addToHistory() {
+    const hist = JSON.parse(localStorage.getItem(historyKey()) || '[]');
+    hist.push({time: new Date().toISOString(), snapshot: JSON.parse(JSON.stringify(state))});
+    if (hist.length > 20) hist.shift();
+    localStorage.setItem(historyKey(), JSON.stringify(hist));
+    renderHistory(hist);
+  }
+  function loadHistory() {
+    const hist = JSON.parse(localStorage.getItem(historyKey()) || '[]');
+    renderHistory(hist);
+  }
+  function renderHistory(hist) {
+    historyList.innerHTML = '';
+    hist.forEach((entry, idx) => {
+      const li = document.createElement('li');
+      li.style.padding = '8px';
+      li.style.borderBottom = '1px solid #ddd';
+      li.textContent = `${new Date(entry.time).toLocaleString()} - 版本 ${hist.length - idx}`;
+      li.onclick = () => {
+        state = JSON.parse(JSON.stringify(entry.snapshot));
+        localStorage.setItem(stateKey(), JSON.stringify(state));
+        render();
+      };
+      historyList.appendChild(li);
+    });
+  }
+
+  function render() {
+    svg.innerHTML = '';
+    // edges
+    state.edges.forEach(e => {
+      const f = state.nodes.find(n => n.id === e.from);
+      const t = state.nodes.find(n => n.id === e.to);
+      if (!f || !t) return;
+      const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      line.setAttribute('x1', f.x + NODE_W/2);
+      line.setAttribute('y1', f.y + NODE_H/2);
+      line.setAttribute('x2', t.x + NODE_W/2);
+      line.setAttribute('y2', t.y + NODE_H/2);
+      line.setAttribute('stroke', '#999');
+      line.setAttribute('stroke-width', '2');
+      svg.appendChild(line);
+    });
+    // nodes
+    state.nodes.forEach(node => {
+      const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+      g.setAttribute('transform', `translate(${node.x},${node.y})`);
+      g.dataset.id = node.id;
+      g.style.cursor = 'move';
+      const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+      rect.setAttribute('width', NODE_W);
+      rect.setAttribute('height', NODE_H);
+      rect.setAttribute('fill', '#fff');
+      rect.setAttribute('stroke', '#3498db');
+      rect.setAttribute('stroke-width', '2');
+      g.appendChild(rect);
+      const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      text.setAttribute('x', NODE_W/2);
+      text.setAttribute('y', NODE_H/2);
+      text.setAttribute('text-anchor', 'middle');
+      text.setAttribute('dominant-baseline', 'middle');
+      text.setAttribute('fill', '#333');
+      text.textContent = node.label || '';
+      g.appendChild(text);
+      // drag
+      let dragOffset = {x:0, y:0};
+      g.addEventListener('mousedown', e => {
+        const pt = svg.createSVGPoint();
+        pt.x = e.clientX; pt.y = e.clientY;
+        const svgPt = pt.matrixTransform(svg.getScreenCTM().inverse());
+        const [tx, ty] = g.getAttribute('transform').match(/translate\(([^)]+)\)/)[1].split(',').map(parseFloat);
+        dragOffset = {x: svgPt.x - tx, y: svgPt.y - ty};
+      });
+      g.addEventListener('mouseup', e => {
+        if (dragOffset.x === 0 && dragOffset.y === 0) return;
+        const pt = svg.createSVGPoint();
+        pt.x = e.clientX; pt.y = e.clientY;
+        const svgPt = pt.matrixTransform(svg.getScreenCTM().inverse());
+        node.x = svgPt.x - dragOffset.x;
+        node.y = svgPt.y - dragOffset.y;
+        // keep within view
+        if (node.x < 0) node.x = 0;
+        if (node.y < 0) node.y = 0;
+        const maxX = svg.width.baseVal.value - NODE_W;
+        const maxY = svg.height.baseVal.value - NODE_H;
+        if (node.x > maxX) node.x = maxX;
+        if (node.y > maxY) node.y = maxY;
+        saveState();
+        dragOffset = {x:0, y:0};
+      });
+      // click for edge creation
+      g.addEventListener('click', e => {
+        if (mode === 'selectSource') {
+          sourceNodeId = node.id;
+          alert('源节点已选中，点击另一个节点创建边');
+          mode = null;
+          btnAddNode.textContent = '添加节点';
+        }
+      });
+      svg.appendChild(g);
+    });
+  }
+
+  function addNodeAt(x, y) {
+    const id = Date.now() + '-' + Math.random().toString(36).substr(2,5);
+    state.nodes.push({id, x: x - NODE_W/2, y: y - NODE_H/2, label: `节点${state.nodes.length+1}`});
+    saveState();
+  }
+
+  svg.addEventListener('click', e => {
+    if (mode === 'addNode') {
+      const pt = svg.createSVGPoint();
+      pt.x = e.clientX; pt.y = e.clientY;
+      const svgPt = pt.matrixTransform(svg.getScreenCTM().inverse());
+      addNodeAt(svgPt.x, svgPt.y);
+    }
+  });
+
+  function initBroadcast() {
+    if (bc) bc.close();
+    bc = new BroadcastChannel(broadcastName());
+    bc.onmessage = ev => {
+      const msg = ev.data;
+      if (msg.type === 'state') {
+        state = msg.payload;
+        render();
+        localStorage.setItem(stateKey(), JSON.stringify(state));
+      }
+    };
+  }
+  function broadcastState() {
+    if (bc) bc.postMessage({type:'state', payload:state});
+  }
+
+  // UI handlers
+  btnNewRoom.onclick = () => {
+    roomId = makeId();
+    roomInput.value = roomId;
+    localStorage.removeItem(stateKey());
+    localStorage.removeItem(historyKey());
+    state = {nodes:[], edges:[]};
+    render();
+    loadHistory();
+    initBroadcast();
+    linkHome.href = `index.html?id=${roomId}`;
+  };
+  btnJoinRoom.onclick = () => {
+    const id = roomInput.value.trim();
+    if (!id) { alert('请输入房间ID'); return; }
+    roomId = id;
+    loadState();
+    loadHistory();
+    initBroadcast();
+    linkHome.href = `index.html?id=${roomId}`;
+  };
+  btnAddNode.onclick = () => {
+    if (mode === 'addNode') {
+      mode = null;
+      btnAddNode.textContent = '添加节点';
+    } else {
+      mode = 'addNode';
+      btnAddNode.textContent = '取消';
+    }
+  };
+  btnClear.onclick = () => {
+    if (!confirm('确定清空画布？')) return;
+    state = {nodes:[], edges:[]};
+    saveState();
+    render();
+    initBroadcast();
+  };
+
+  // URL param init
+  window.addEventListener('load', () => {
+    const url = new URL(window.location);
+    const paramId = url.searchParams.get('id');
+    if (paramId) {
+      roomInput.value = paramId;
+      roomId = paramId;
+      loadState();
+      loadHistory();
+      initBroadcast();
+      linkHome.href = `index.html?id=${roomId}`;
+    }
+  });
+</script>
+
+    </div>
+<footer data-a2a="footer" style="margin-top:48px;padding:28px 16px;border-top:1px solid rgba(127,127,127,.16);text-align:center;font-family:system-ui,-apple-system,'PingFang SC',sans-serif;line-height:1.9;color:#8a8f99;background:transparent"><a href="https://www.autoa2a.org" target="_blank" rel="noopener" style="display:inline-block;margin-bottom:10px"><img src="https://agent.oagi.com.cn/uploads/202606/29ea3ed5413830b3.png" alt="AutoA2A" style="height:36px;vertical-align:middle;border:0"></a><div style="font-size:13.5px;color:#6b7280;max-width:760px;margin:0 auto 6px">✅️ <b>AutoA2A</b> · 智能体互连 Agent to Agent 平台——让智能体无缝发现、协商、协作与安全交换数据，开启 AI 即服务新时代。</div><div style="font-size:13px">本网站由 <a href="https://www.autoa2a.org" target="_blank" rel="noopener" style="color:#f2603c;text-decoration:none;font-weight:600">www.autoa2a.org</a> 多个 AI 协作生成</div><div style="font-size:12px;color:#aab;margin-top:6px">Copyright © 2025 - 2026 AutoA2A. All Rights Reserved. A2A版权所有</div></footer></body>
+</html>
