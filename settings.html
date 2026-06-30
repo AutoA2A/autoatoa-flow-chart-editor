@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>全局设置</title>
+    <style>
+        body {
+            font-family: 'Open Sans', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f9f9f9;
+            color: #333;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 16px;
+        }
+        nav {
+            background-color: #3498db;
+            color: #fff;
+            padding: 16px;
+            text-align: center;
+        }
+        nav ul {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+        nav ul li {
+            display: inline-block;
+            margin-right: 16px;
+        }
+        nav ul li a {
+            color: #fff;
+            text-decoration: none;
+        }
+        nav ul li a:hover {
+            text-decoration: underline;
+        }
+        header {
+            background-color: #fff;
+            padding: 16px;
+            border-bottom: 4px solid #3498db;
+        }
+        header h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+        @media (max-width: 768px) {
+            nav ul li {
+                display: block;
+                margin-right: 0;
+                padding: 8px 0;
+            }
+            .container {
+                padding: 8px;
+            }
+        }
+    </style>
+<meta name="description" content="优化快捷键配置功能，确保在主流浏览器上的一致性体验"><meta name="keywords" content="流程图,编辑器,协作编辑,模板库,导出"><meta name="robots" content="index,follow,max-image-preview:large"><meta property="og:type" content="website"><meta property="og:title" content="全局设置"><meta property="og:description" content="优化快捷键配置功能，确保在主流浏览器上的一致性体验"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="全局设置"><meta name="twitter:description" content="优化快捷键配置功能，确保在主流浏览器上的一致性体验"><script type="application/ld+json">{"@context":"https://schema.org","@type":"WebApplication","name":"全局设置","description":"优化快捷键配置功能，确保在主流浏览器上的一致性体验","applicationCategory":"UtilitiesApplication","operatingSystem":"Any","offers":{"@type":"Offer","price":"0","priceCurrency":"CNY"}}</script><style data-a2a="basecss">*,*::before,*::after{box-sizing:border-box}html{-webkit-text-size-adjust:100%}body{margin:0}img,canvas,svg,video,table{max-width:100%;height:auto}pre,code{white-space:pre-wrap;word-break:break-word}[data-a2a="header"]{width:100%}@media(max-width:640px){body{font-size:15px}}</style></head>
+<body>
+    <nav>
+        <ul>
+            <li><a href="index.html">首页</a></li>
+            <li><a href="templates.html">模板库</a></li>
+            <li><a href="collaboration.html">协作编辑</a></li>
+            <li><a href="settings.html">全局设置</a></li>
+            <li><a href="help.html">使用帮助</a></li>
+            <li><a href="export.html">导出与保存</a></li>
+        </ul>
+    </nav>
+    <header>
+        <div class="container">
+            <h1>交互式流程图编辑器</h1>
+        </div>
+    </header>
+    <div class="container">
+        
+<section>
+    <article class="card">
+        <h2>全局主题</h2>
+        <p>选择全局主题色，页面会即时切换。</p>
+        <div style="display:flex;gap:16px;margin-top:12px;">
+            <button class="btn" data-theme="light">浅色主题</button>
+            <button class="btn" data-theme="dark">深色主题</button>
+        </div>
+    </article>
+
+    <article class="card">
+        <h2>网格显示</h2>
+        <p>在编辑器画布上显示或隐藏参考网格。</p>
+        <label style="display:flex;align-items:center;margin-top:12px;">
+            <input type="checkbox" id="gridToggle" style="margin-right:8px;">
+            显示网格
+        </label>
+    </article>
+
+    <article class="card">
+        <h2>快捷键配置</h2>
+        <p>自定义常用快捷键（保存、撤销、重做），在主流浏览器保持一致。</p>
+        <form id="shortcutForm" style="display:grid;gap:12px;margin-top:12px;">
+            <div>
+                <label for="saveKey">保存 (Ctrl+S)：</label>
+                <input type="text" id="saveKey" placeholder="如 S" autocomplete="off"
+                       style="width:100%;padding:6px;border:1px solid #ddd;border-radius:4px;box-sizing:border-box;">
+            </div>
+            <div>
+                <label for="undoKey">撤销 (Ctrl+Z)：</label>
+                <input type="text" id="undoKey" placeholder="如 Z" autocomplete="off"
+                       style="width:100%;padding:6px;border:1px solid #ddd;border-radius:4px;box-sizing:border-box;">
+            </div>
+            <div>
+                <label for="redoKey">重做 (Ctrl+Y)：</label>
+                <input type="text" id="redoKey" placeholder="如 Y" autocomplete="off"
+                       style="width:100%;padding:6px;border:1px solid #ddd;border-radius:4px;box-sizing:border-box;">
+            </div>
+        </form>
+        <button class="btn" id="saveShortcuts">保存设置</button>
+        <p id="shortcutMsg" style="margin-top:8px;color:#3498db;"></p>
+        <p style="margin-top:12px;">
+            <a href="shortcuts.html?id=shortcutHelp" class="btn" style="background:#2ecc71;">快捷键使用说明</a>
+            <a href="index.html?id=home" class="btn" style="background:#95a5a6;">返回首页</a>
+        </p>
+    </article>
+</section>
+
+<script>
+(() => {
+    const saveBtn = document.getElementById('saveShortcuts');
+    const msg = document.getElementById('shortcutMsg');
+
+    const normalizeKey = key => key.trim().toUpperCase();
+
+    saveBtn.addEventListener('click', () => {
+        const saveKey = normalizeKey(document.getElementById('saveKey').value);
+        const undoKey = normalizeKey(document.getElementById('undoKey').value);
+        const redoKey = normalizeKey(document.getElementById('redoKey').value);
+
+        if (!saveKey || !undoKey || !redoKey) {
+            msg.textContent = '请完整填写所有快捷键。';
+            msg.style.color = '#e74c3c';
+            return;
+        }
+
+        const shortcuts = { save: saveKey, undo: undoKey, redo: redoKey };
+        localStorage.setItem('editorShortcuts', JSON.stringify(shortcuts));
+        msg.textContent = '快捷键已保存，刷新页面后生效。';
+        msg.style.color = '#2ecc71';
+    });
+
+    // 读取并填充已有配置
+    const stored = localStorage.getItem('editorShortcuts');
+    if (stored) {
+        const { save, undo, redo } = JSON.parse(stored);
+        document.getElementById('saveKey').value = save;
+        document.getElementById('undoKey').value = undo;
+        document.getElementById('redoKey').value = redo;
+    }
+})();
+</script>
+
+    </div>
+<footer data-a2a="footer" style="margin-top:48px;padding:28px 16px;border-top:1px solid rgba(127,127,127,.16);text-align:center;font-family:system-ui,-apple-system,'PingFang SC',sans-serif;line-height:1.9;color:#8a8f99;background:transparent"><a href="https://www.autoa2a.org" target="_blank" rel="noopener" style="display:inline-block;margin-bottom:10px"><img src="https://agent.oagi.com.cn/uploads/202606/29ea3ed5413830b3.png" alt="AutoA2A" style="height:36px;vertical-align:middle;border:0"></a><div style="font-size:13.5px;color:#6b7280;max-width:760px;margin:0 auto 6px">✅️ <b>AutoA2A</b> · 智能体互连 Agent to Agent 平台——让智能体无缝发现、协商、协作与安全交换数据，开启 AI 即服务新时代。</div><div style="font-size:13px">本网站由 <a href="https://www.autoa2a.org" target="_blank" rel="noopener" style="color:#f2603c;text-decoration:none;font-weight:600">www.autoa2a.org</a> 多个 AI 协作生成</div><div style="font-size:12px;color:#aab;margin-top:6px">Copyright © 2025 - 2026 AutoA2A. All Rights Reserved. A2A版权所有</div></footer></body>
+</html>
