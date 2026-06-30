@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>导出与保存</title>
+    <style>
+        body {
+            font-family: 'Open Sans', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f9f9f9;
+            color: #333;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 16px;
+        }
+        nav {
+            background-color: #3498db;
+            color: #fff;
+            padding: 16px;
+            text-align: center;
+        }
+        nav ul {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+        nav ul li {
+            display: inline-block;
+            margin-right: 16px;
+        }
+        nav ul li a {
+            color: #fff;
+            text-decoration: none;
+        }
+        nav ul li a:hover {
+            text-decoration: underline;
+        }
+        header {
+            background-color: #fff;
+            padding: 16px;
+            border-bottom: 4px solid #3498db;
+        }
+        header h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+        @media (max-width: 768px) {
+            nav ul li {
+                display: block;
+                margin-right: 0;
+                padding: 8px 0;
+            }
+            .container {
+                padding: 8px;
+            }
+        }
+    </style>
+<meta name="description" content="支持自定义导出图片的分辨率和尺寸"><meta name="keywords" content="流程图,编辑器,协作编辑,模板库,导出"><meta name="robots" content="index,follow,max-image-preview:large"><meta property="og:type" content="website"><meta property="og:title" content="导出与保存"><meta property="og:description" content="支持自定义导出图片的分辨率和尺寸"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="导出与保存"><meta name="twitter:description" content="支持自定义导出图片的分辨率和尺寸"><script type="application/ld+json">{"@context":"https://schema.org","@type":"WebApplication","name":"导出与保存","description":"支持自定义导出图片的分辨率和尺寸","applicationCategory":"UtilitiesApplication","operatingSystem":"Any","offers":{"@type":"Offer","price":"0","priceCurrency":"CNY"}}</script><style data-a2a="basecss">*,*::before,*::after{box-sizing:border-box}html{-webkit-text-size-adjust:100%}body{margin:0}img,canvas,svg,video,table{max-width:100%;height:auto}pre,code{white-space:pre-wrap;word-break:break-word}[data-a2a="header"]{width:100%}@media(max-width:640px){body{font-size:15px}}</style></head>
+<body>
+    <nav>
+        <ul>
+            <li><a href="index.html">首页</a></li>
+            <li><a href="templates.html">模板库</a></li>
+            <li><a href="collaboration.html">协作编辑</a></li>
+            <li><a href="settings.html">全局设置</a></li>
+            <li><a href="help.html">使用帮助</a></li>
+            <li><a href="export.html">导出与保存</a></li>
+        </ul>
+    </nav>
+    <header>
+        <div class="container">
+            <h1>交互式流程图编辑器</h1>
+        </div>
+    </header>
+    <div class="container">
+        
+<section class="content">
+    <article class="card">
+        <h3 class="card-title" style="margin-top:0;margin-bottom:var(--spacing);">导出 SVG</h3>
+        <p>将当前流程图导出为可编辑的 SVG 文件。</p>
+        <button class="btn" id="export-svg">下载 SVG</button>
+    </article>
+
+    <article class="card">
+        <h3 class="card-title" style="margin-top:0;margin-bottom:var(--spacing);">导出 PNG</h3>
+        <p>自定义分辨率后导出位图 PNG。</p>
+        <div style="margin-bottom:var(--spacing);">
+            <label>宽度 (px)：<input type="number" id="png-width" min="1" style="width:80px;margin-left:4px;"></label>
+            <label style="margin-left:12px;">高度 (px)：<input type="number" id="png-height" min="1" style="width:80px;margin-left:4px;"></label>
+            <label style="margin-left:12px;">比例 (×)：<input type="number" id="png-scale" min="0.1" step="0.1" value="1" style="width:60px;margin-left:4px;"></label>
+        </div>
+        <button class="btn" id="export-png">下载 PNG</button>
+    </article>
+
+    <article class="card">
+        <h3 class="card-title" style="margin-top:0;margin-bottom:var(--spacing);">导出 JSON</h3>
+        <p>保存当前图形的结构数据，稍后可在编辑器中恢复。</p>
+        <button class="btn" id="export-json">下载 JSON</button>
+    </article>
+
+    <div style="margin-top:calc(var(--spacing)*2);">
+        <a href="index.html" class="btn" style="display:inline-block;">返回编辑器</a>
+    </div>
+</section>
+
+<script>
+(() => {
+    // 读取当前流程图的 SVG 元素（编辑器应把它挂在 window.flowchart.svgElement）
+    const getSvgElement = () => {
+        return window.flowchart?.svgElement ||
+               document.querySelector('svg#diagram') ||
+               document.querySelector('svg');
+    };
+
+    const downloadBlob = (blob, filename) => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        a.click();
+        URL.revokeObjectURL(url);
+    };
+
+    // 导出 SVG
+    document.getElementById('export-svg').addEventListener('click', () => {
+        const svg = getSvgElement();
+        if (!svg) return alert('未找到 SVG 元素');
+        const serializer = new XMLSerializer();
+        let source = serializer.serializeToString(svg);
+        // 添加命名空间
+        if (!source.match(/^<svg[^>]+xmlns:/)) {
+            source = source.replace(/^<svg/, '<svg xmlns="http://www.w3.org/2000/svg"');
+        }
+        const blob = new Blob([source], {type: 'image/svg+xml;charset=utf-8'});
+        downloadBlob(blob, 'flowchart.svg');
+    });
+
+    // 导出 PNG
+    document.getElementById('export-png').addEventListener('click', () => {
+        const svg = getSvgElement();
+        if (!svg) return alert('未找到 SVG 元素');
+
+        const widthInput = document.getElementById('png-width');
+        const heightInput = document.getElementById('png-height');
+        const scaleInput = document.getElementById('png-scale');
+
+        const rect = svg.getBoundingClientRect();
+        const baseWidth = rect.width;
+        const baseHeight = rect.height;
+
+        const width = parseInt(widthInput.value) || baseWidth;
+        const height = parseInt(heightInput.value) || baseHeight;
+        const scale = parseFloat(scaleInput.value) || 1;
+
+        const canvas = document.createElement('canvas');
+        canvas.width = width * scale;
+        canvas.height = height * scale;
+        const ctx = canvas.getContext('2d');
+
+        const img = new Image();
+        const serializer = new XMLSerializer();
+        let source = serializer.serializeToString(svg);
+        if (!source.match(/^<svg[^>]+xmlns:/)) {
+            source = source.replace(/^<svg/, '<svg xmlns="http://www.w3.org/2000/svg"');
+        }
+        const svgBlob = new Blob([source], {type: 'image/svg+xml;charset=utf-8'});
+        const url = URL.createObjectURL(svgBlob);
+
+        img.onload = () => {
+            ctx.scale(scale, scale);
+            ctx.drawImage(img, 0, 0, width, height);
+            URL.revokeObjectURL(url);
+            canvas.toBlob(blob => downloadBlob(blob, 'flowchart.png'));
+        };
+        img.onerror = () => {
+            URL.revokeObjectURL(url);
+            alert('PNG 导出失败，请检查浏览器支持。');
+        };
+        img.src = url;
+    });
+
+    // 导出 JSON（假设编辑器把数据保存在 window.flowchart?.data）
+    document.getElementById('export-json').addEventListener('click', () => {
+        const data = window.flowchart?.data;
+        if (!data) return alert('未找到流程图数据');
+        const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
+        downloadBlob(blob, 'flowchart.json');
+    });
+})();
+</script>
+
+    </div>
+<footer data-a2a="footer" style="margin-top:48px;padding:28px 16px;border-top:1px solid rgba(127,127,127,.16);text-align:center;font-family:system-ui,-apple-system,'PingFang SC',sans-serif;line-height:1.9;color:#8a8f99;background:transparent"><a href="https://www.autoa2a.org" target="_blank" rel="noopener" style="display:inline-block;margin-bottom:10px"><img src="https://agent.oagi.com.cn/uploads/202606/29ea3ed5413830b3.png" alt="AutoA2A" style="height:36px;vertical-align:middle;border:0"></a><div style="font-size:13.5px;color:#6b7280;max-width:760px;margin:0 auto 6px">✅️ <b>AutoA2A</b> · 智能体互连 Agent to Agent 平台——让智能体无缝发现、协商、协作与安全交换数据，开启 AI 即服务新时代。</div><div style="font-size:13px">本网站由 <a href="https://www.autoa2a.org" target="_blank" rel="noopener" style="color:#f2603c;text-decoration:none;font-weight:600">www.autoa2a.org</a> 多个 AI 协作生成</div><div style="font-size:12px;color:#aab;margin-top:6px">Copyright © 2025 - 2026 AutoA2A. All Rights Reserved. A2A版权所有</div></footer></body>
+</html>
